@@ -360,6 +360,7 @@ func (mounter *Mounter) Unmount(target string) error {
 	klog.V(4).Infof("Unmounting %s", target)
 	command := exec.Command("umount", target)
 	output, err := command.CombinedOutput()
+	klog.V(4).Infof("Output is %s, err is %v", string(output), err)
 	if err != nil {
 		return checkUmountError(target, command, output, err, mounter.withSafeNotMountedBehavior)
 	}
@@ -817,10 +818,13 @@ func forceUmount(target string, withSafeNotMountedBehavior bool) error {
 // checkUmountError checks a result of umount command and determine a return value.
 func checkUmountError(target string, command *exec.Cmd, output []byte, err error, withSafeNotMountedBehavior bool) error {
 	if err.Error() == errNoChildProcesses {
+		klog.V(4).Infof("err is errNoChildProcesses")
 		if command.ProcessState.Success() {
+			klog.V(4).Infof("command is successful")
 			// We don't consider errNoChildProcesses an error if the process itself succeeded (see - k/k issue #103753).
 			return nil
 		}
+		klog.V(4).Infof("command is not successful")
 		// Rewrite err with the actual exit error of the process.
 		err = &exec.ExitError{ProcessState: command.ProcessState}
 	}
@@ -828,5 +832,6 @@ func checkUmountError(target string, command *exec.Cmd, output []byte, err error
 		klog.V(4).Infof("ignoring 'not mounted' error for %s", target)
 		return nil
 	}
+	klog.V(4).Infof("unmount failed actually")
 	return fmt.Errorf("unmount failed: %v\nUnmounting arguments: %s\nOutput: %s", err, target, string(output))
 }
